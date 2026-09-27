@@ -4,13 +4,15 @@
 
 [Русский](#ru) · [English](#en)
 
-![Скриншот генератора Кодограф / Kodograf interface screenshot](assets/preview.png)
+![Скриншот интерфейса Кодограф / Screenshot of the Kodograf interface](assets/preview.png)
 
 <a id="ru"></a>
 
 ## Русский
 
 **Кодограф** создаёт QR-коды и штрихкоды, показывает результат до скачивания и экспортирует его в PNG или SVG. Сайт работает без регистрации и серверной обработки: введённые данные остаются в браузере. Он подходит для публикации на GitHub Pages.
+
+**Сайт:** [monavyr.github.io/kodograf](https://monavyr.github.io/kodograf/)
 
 ### Возможности
 
@@ -48,34 +50,36 @@ HTML, CSS и JavaScript без серверной части. Генерация
 
 ## English
 
-**Kodograf** generates QR codes and barcodes in the browser, previews the result, and exports PNG or SVG files. It needs no account or server-side processing: input stays in the browser. The static site can be hosted on GitHub Pages.
+**Kodograf** creates QR codes and barcodes, shows the result before download, and exports it as PNG or SVG. The site works without registration or server-side processing: entered data stays in the browser. It can be published on GitHub Pages.
+
+**Website:** [monavyr.github.io/kodograf](https://monavyr.github.io/kodograf/)
 
 ### Features
 
-- QR codes for text, URLs, Wi-Fi credentials, email addresses, and phone numbers.
+- QR codes for text, links, Wi-Fi, email addresses, and phone numbers.
 - Code 128, EAN-13, EAN-8, UPC-A, Code 39, and ITF-14 barcodes.
-- Adjustable size and colors, transparent background, optional barcode text, and live preview.
-- PNG and SVG downloads; responsive interface for mobile devices.
-- Libraries are bundled in `vendor/`; generation requires no external CDN or API.
+- Adjustable size and colors, a transparent background, text below the barcode, and a preview.
+- PNG or SVG downloads; the interface is adapted for phones.
+- The libraries are in `vendor/`: generating codes requires no external CDN or API.
 
 ### Run locally
 
-Open `index.html` in your browser, or start a local server from the project root:
+Open `index.html` in a browser. You can also start a local server from the project root:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then visit `http://localhost:8000/`.
+Then open `http://localhost:8000/`.
 
 ### Limitations
 
-- Barcodes in this version accept Latin characters, digits, and characters supported by the selected format. Use QR codes for Cyrillic text.
-- EAN and UPC have fixed input lengths; a check digit is calculated automatically. Generating an image does not register a product identifier.
-- Test the code with a scanner at its final print size. Transparent codes need a light, even surface for reliable scanning.
+- Barcodes in this version accept Latin letters, digits, and characters allowed by the selected format. Cyrillic can be encoded in a QR code.
+- EAN and UPC require values of a specified length; the check digit is calculated automatically. A generated image does not mean that the product number is registered.
+- Before printing, check that the code can be scanned at its final size. A transparent background needs a light, even surface.
 
 ### Tech and licenses
 
-HTML, CSS, and JavaScript; no backend. Barcode generation uses [JsBarcode 3.12.3](https://github.com/lindell/JsBarcode). QR generation uses [node-qrcode 1.5.4](https://github.com/soldair/node-qrcode), bundled for the browser, with [dijkstrajs](https://github.com/andrewhayward/dijkstra). Third-party license texts are in `vendor/licenses/`.
+HTML, CSS, and JavaScript without a server-side component. Barcode generation: [JsBarcode 3.12.3](https://github.com/lindell/JsBarcode). QR generation: [node-qrcode 1.5.4](https://github.com/soldair/node-qrcode), bundled for the browser; dependency: [dijkstrajs](https://github.com/andrewhayward/dijkstra). Third-party library license texts are in `vendor/licenses/`.
 
-The project's own source code does not currently specify a license.
+No separate license has yet been specified for this project's source code.
