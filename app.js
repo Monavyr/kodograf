@@ -91,6 +91,21 @@
     return { dark, light, transparent };
   }
 
+  function syncColorControls() {
+    const foreground = $("foreground").value.toUpperCase();
+    const background = $("background").value.toUpperCase();
+    const transparent = $("transparent").checked;
+    $("foreground-hex").textContent = foreground;
+    $("background-hex").textContent = background;
+    $("foreground-swatch").style.backgroundColor = foreground;
+    $("background-swatch").style.backgroundColor = background;
+    for (const option of document.querySelectorAll(".palette-option")) {
+      const selected = !transparent && option.dataset.foreground.toUpperCase() === foreground && option.dataset.background.toUpperCase() === background;
+      option.classList.toggle("selected", selected);
+      option.setAttribute("aria-pressed", String(selected));
+    }
+  }
+
   function barcodeOptions() {
     const { dark, light, transparent } = colors();
     return {
@@ -148,8 +163,8 @@
     $("preview").classList.toggle("transparent-preview", $("transparent").checked);
     $("background").disabled = $("transparent").checked;
     $("transparent-hint").hidden = !$("transparent").checked;
-    $("foreground-hex").textContent = $("foreground").value.toUpperCase();
-    $("background-hex").textContent = $("background").value.toUpperCase();
+    $("qr-size-note").textContent = `${$("qr-size").value || "—"} × ${$("qr-size").value || "—"} px`;
+    syncColorControls();
     try {
       if (mode === "barcode") {
         const value = $("barcode-value").value;
@@ -165,6 +180,9 @@
         const canvas = document.createElement("canvas");
         await QRCode.toCanvas(canvas, payload, qrOptions());
         if (seq !== renderSequence) return;
+        // The QR library fixes both CSS dimensions inline; let the preview scale as a square.
+        canvas.style.removeProperty("width");
+        canvas.style.removeProperty("height");
         canvas.setAttribute("aria-hidden", "true");
         $("preview").replaceChildren(canvas);
       }
@@ -253,6 +271,17 @@
 
   $("mode-qr").addEventListener("click", () => setMode("qr"));
   $("mode-barcode").addEventListener("click", () => setMode("barcode"));
+  for (const option of document.querySelectorAll(".palette-option")) {
+    option.addEventListener("click", () => {
+      $("foreground").value = option.dataset.foreground;
+      $("background").value = option.dataset.background;
+      $("transparent").checked = false;
+      syncColorControls();
+      scheduleRender();
+    });
+  }
+  $("foreground").addEventListener("input", syncColorControls);
+  $("background").addEventListener("input", syncColorControls);
   $("qr-kind").addEventListener("change", setQRKind);
   $("barcode-format").addEventListener("change", () => {
     const [example, hint] = formatExamples[$("barcode-format").value];

@@ -66,9 +66,10 @@
               <label class="field" for="qr-contact"><span id="qr-contact-label">Адрес</span><input id="qr-contact" maxlength="320" autocomplete="off" placeholder="name@example.com"></label>
             </div>
             <div class="field-row">
-              <label class="field" for="qr-size"><span>Размер файла, px</span><input id="qr-size" type="number" min="160" max="1200" step="10" value="360"></label>
+              <label class="field" for="qr-size"><span>Размер QR, px</span><input id="qr-size" type="number" min="160" max="1200" step="10" value="360"></label>
               <label class="field" for="qr-error"><span>Коррекция ошибок</span><select id="qr-error"><option value="M">Стандартная · M</option><option value="L">Низкая · L</option><option value="Q">Высокая · Q</option><option value="H">Максимальная · H</option></select></label>
             </div>
+            <p class="size-note">Файл будет квадратным: <strong id="qr-size-note">360 × 360 px</strong>. Предпросмотр подстраивается под экран.</p>
           </div>
 
           <div id="barcode-fields" hidden>
@@ -92,9 +93,18 @@
           </div>
 
           <div class="divider"></div>
+          <fieldset class="palette">
+            <legend>Готовые сочетания</legend>
+            <div class="palette-options">
+              <button type="button" class="palette-option selected" data-foreground="#101827" data-background="#FFFFFF" aria-pressed="true"><span class="palette-sample" style="--sample-code:#101827;--sample-bg:#FFFFFF" aria-hidden="true"></span><span>Классика</span></button>
+              <button type="button" class="palette-option" data-foreground="#174A3A" data-background="#F2F8F0" aria-pressed="false"><span class="palette-sample" style="--sample-code:#174A3A;--sample-bg:#F2F8F0" aria-hidden="true"></span><span>Лес</span></button>
+              <button type="button" class="palette-option" data-foreground="#183B76" data-background="#F0F6FF" aria-pressed="false"><span class="palette-sample" style="--sample-code:#183B76;--sample-bg:#F0F6FF" aria-hidden="true"></span><span>Синий</span></button>
+              <button type="button" class="palette-option" data-foreground="#702A41" data-background="#FFF5F4" aria-pressed="false"><span class="palette-sample" style="--sample-code:#702A41;--sample-bg:#FFF5F4" aria-hidden="true"></span><span>Бордо</span></button>
+            </div>
+          </fieldset>
           <div class="color-row">
-            <label class="field color-field" for="foreground"><span>Цвет кода</span><span class="color-control"><input id="foreground" type="color" value="#101827"><span id="foreground-hex">#101827</span></span></label>
-            <label class="field color-field" for="background"><span>Фон</span><span class="color-control"><input id="background" type="color" value="#ffffff"><span id="background-hex">#FFFFFF</span></span></label>
+            <label class="field color-field" for="foreground"><span>Цвет кода</span><span class="color-control"><input id="foreground" type="color" value="#101827"><span class="color-swatch" id="foreground-swatch" aria-hidden="true"></span><span id="foreground-hex">#101827</span><span class="color-control-arrow" aria-hidden="true">↗</span></span></label>
+            <label class="field color-field" for="background"><span>Фон</span><span class="color-control"><input id="background" type="color" value="#ffffff"><span class="color-swatch" id="background-swatch" aria-hidden="true"></span><span id="background-hex">#FFFFFF</span><span class="color-control-arrow" aria-hidden="true">↗</span></span></label>
           </div>
           <label class="checkline"><input id="transparent" type="checkbox"> Прозрачный фон</label>
           <p id="transparent-hint" class="hint" hidden>Для надёжного сканирования размещайте код на светлой однотонной поверхности.</p>
