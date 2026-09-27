@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="Бесплатный генератор QR-кодов и штрихкодов Code 128, EAN, UPC, Code 39 и ITF-14. Экспорт PNG и SVG прямо в браузере.">
+  <title>Кодограф — генератор QR и штрихкодов</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="vendor/JsBarcode.all.min.js"></script>
+  <script defer src="vendor/qrcode.bundle.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="shell topbar-inner">
+      <a class="brand" href="#top" aria-label="Кодограф — на главную">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span>Кодограф</span>
+      </a>
+      <span class="topbar-note"><span class="status-dot"></span> Работает прямо в браузере</span>
+    </div>
+  </header>
+
+  <main id="top" class="shell">
+    <section class="intro" aria-labelledby="page-title">
+      <div class="eyebrow">Бесплатный инструмент · без регистрации</div>
+      <h1 id="page-title">Создайте код.<br><span>Заберите файл.</span></h1>
+      <p>QR-коды и штрихкоды для ссылок, товаров и документов. Настройте вид, проверьте результат и скачайте PNG или SVG.</p>
+    </section>
+
+    <section class="workspace" aria-label="Генератор кодов">
+      <div class="editor card">
+        <div class="card-heading">
+          <div><span class="step">01 / НАСТРОЙКА</span><h2>Что создаём?</h2></div>
+        </div>
+
+        <div class="segmented" role="group" aria-label="Тип кода">
+          <button type="button" class="segment active" id="mode-qr" aria-pressed="true">▦ <span>QR-код</span></button>
+          <button type="button" class="segment" id="mode-barcode" aria-pressed="false">▥ <span>Штрихкод</span></button>
+        </div>
+
+        <form id="generator-form" novalidate>
+          <div id="qr-fields">
+            <label class="field" for="qr-kind"><span>Содержимое QR-кода</span>
+              <select id="qr-kind">
+                <option value="text">Текст или ссылка</option>
+                <option value="wifi">Доступ к Wi-Fi</option>
+                <option value="email">Адрес электронной почты</option>
+                <option value="phone">Телефонный номер</option>
+              </select>
+            </label>
+            <div id="qr-text-fields">
+              <label class="field" for="qr-text"><span>Текст или URL</span>
+                <textarea id="qr-text" rows="3" maxlength="2000" placeholder="https://example.com">https://example.com</textarea>
+              </label>
+            </div>
+            <div id="qr-wifi-fields" hidden>
+              <label class="field" for="wifi-ssid"><span>Название сети (SSID)</span><input id="wifi-ssid" maxlength="100" autocomplete="off" placeholder="Моя сеть"></label>
+              <label class="field" for="wifi-password"><span>Пароль</span><input id="wifi-password" type="password" maxlength="100" autocomplete="off" placeholder="Пароль сети"></label>
+              <label class="checkline"><input id="wifi-show-password" type="checkbox"> Показать пароль</label>
+              <label class="field" for="wifi-security"><span>Защита сети</span><select id="wifi-security"><option value="WPA">WPA / WPA2 / WPA3</option><option value="WEP">WEP</option><option value="nopass">Без пароля</option></select></label>
+            </div>
+            <div id="qr-contact-fields" hidden>
+              <label class="field" for="qr-contact"><span id="qr-contact-label">Адрес</span><input id="qr-contact" maxlength="320" autocomplete="off" placeholder="name@example.com"></label>
+            </div>
+            <div class="field-row">
+              <label class="field" for="qr-size"><span>Размер файла, px</span><input id="qr-size" type="number" min="160" max="1200" step="10" value="360"></label>
+              <label class="field" for="qr-error"><span>Коррекция ошибок</span><select id="qr-error"><option value="M">Стандартная · M</option><option value="L">Низкая · L</option><option value="Q">Высокая · Q</option><option value="H">Максимальная · H</option></select></label>
+            </div>
+          </div>
+
+          <div id="barcode-fields" hidden>
+            <label class="field" for="barcode-format"><span>Формат штрихкода</span>
+              <select id="barcode-format">
+                <option value="CODE128">Code 128 · текст и цифры</option>
+                <option value="EAN13">EAN-13 · товарный код</option>
+                <option value="EAN8">EAN-8 · короткий товарный код</option>
+                <option value="UPC">UPC-A · товарный код</option>
+                <option value="CODE39">Code 39 · буквенно-цифровой</option>
+                <option value="ITF14">ITF-14 · упаковка</option>
+              </select>
+            </label>
+            <label class="field" for="barcode-value"><span>Значение</span><input id="barcode-value" value="CODE128-2026" maxlength="100" autocomplete="off" spellcheck="false"></label>
+            <p id="barcode-hint" class="hint">Code 128: латинские буквы, цифры и обычные символы.</p>
+            <div class="field-row">
+              <label class="field" for="bar-width"><span>Ширина штриха, px</span><input id="bar-width" type="number" min="1" max="5" step="0.5" value="2"></label>
+              <label class="field" for="bar-height"><span>Высота штрихов, px</span><input id="bar-height" type="number" min="40" max="240" step="10" value="100"></label>
+            </div>
+            <label class="checkline"><input id="show-label" type="checkbox" checked> Показать значение под штрихкодом</label>
+          </div>
+
+          <div class="divider"></div>
+          <div class="color-row">
+            <label class="field color-field" for="foreground"><span>Цвет кода</span><span class="color-control"><input id="foreground" type="color" value="#101827"><span id="foreground-hex">#101827</span></span></label>
+            <label class="field color-field" for="background"><span>Фон</span><span class="color-control"><input id="background" type="color" value="#ffffff"><span id="background-hex">#FFFFFF</span></span></label>
+          </div>
+          <label class="checkline"><input id="transparent" type="checkbox"> Прозрачный фон</label>
+          <p id="transparent-hint" class="hint" hidden>Для надёжного сканирования размещайте код на светлой однотонной поверхности.</p>
+        </form>
+      </div>
+
+      <div class="result card">
+        <div class="card-heading"><div><span class="step">02 / РЕЗУЛЬТАТ</span><h2>Предпросмотр</h2></div><span class="live-indicator">● В реальном времени</span></div>
+        <div class="preview-stage"><div id="preview" class="preview-art" role="img" aria-label="Предпросмотр кода"></div></div>
+        <p id="status" class="result-status" role="status" aria-live="polite">Код готов к скачиванию</p>
+        <p id="error" class="error" role="alert" hidden></p>
+        <div class="download-actions">
+          <button type="button" id="download-png" class="button primary">↓ Скачать PNG</button>
+          <button type="button" id="download-svg" class="button secondary">↓ Скачать SVG</button>
+        </div>
+        <p class="privacy"><span aria-hidden="true">◈</span> Данные остаются в вашем браузере. Сайт не отправляет введённый текст на сервер.</p>
+      </div>
+    </section>
+
+    <section class="info-grid" aria-label="Подсказки">
+      <div class="info-card"><span class="info-number">01</span><h3>Какой формат выбрать?</h3><p>QR-код подходит для ссылок и текста. Code 128 — для произвольных латинских обозначений. EAN и UPC нужны для числовых товарных кодов.</p></div>
+      <div class="info-card"><span class="info-number">02</span><h3>PNG или SVG?</h3><p>PNG удобно вставить в документ. SVG можно масштабировать без потери чёткости и использовать для печати.</p></div>
+      <div class="info-card"><span class="info-number">03</span><h3>Перед печатью</h3><p>Проверьте код камерой или сканером в его конечном размере. Контраст и свободное поле вокруг изображения влияют на считывание.</p></div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="shell footer-inner"><span>Кодограф</span><span>Генератор для личных и учебных задач</span></div></footer>
+</body>
+</html>
