@@ -16,6 +16,8 @@
   let valid = false;
   let renderSequence = 0;
   let timer;
+  let activeColor = null;
+  let pickerHSV = { h: 0, s: 0, v: 0 };
 
   function setMode(next) {
     mode = next;
@@ -106,6 +108,74 @@
     }
   }
 
+  function hexToHSV(hex) {
+    const [r, g, b] = [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16) / 255);
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+    let h = 0;
+    if (delta) {
+      if (max === r) h = ((g - b) / delta) % 6;
+      else if (max === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = (h * 60 + 360) % 360;
+    }
+    return { h, s: max ? delta / max : 0, v: max };
+  }
+
+  function hsvToHex({ h, s, v }) {
+    const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+    const parts = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return `#${parts.map((part) => Math.round((part + m) * 255).toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+  }
+
+  function updatePickerUI() {
+    $("picker-plane").style.setProperty("--picker-hue", `${pickerHSV.h}`);
+    $("picker-cursor").style.left = `${pickerHSV.s * 100}%`;
+    $("picker-cursor").style.top = `${(1 - pickerHSV.v) * 100}%`;
+    $("picker-hue").value = String(Math.round(pickerHSV.h));
+    $("picker-hex").value = $(activeColor).value.toUpperCase();
+    $("picker-plane").setAttribute("aria-valuenow", String(Math.round(pickerHSV.s * 100)));
+    $("picker-plane").setAttribute("aria-valuetext", `Насыщенность ${Math.round(pickerHSV.s * 100)}%, яркость ${Math.round(pickerHSV.v * 100)}%`);
+  }
+
+  function setPickerColor() {
+    $(activeColor).value = hsvToHex(pickerHSV);
+    updatePickerUI();
+    syncColorControls();
+    scheduleRender();
+  }
+
+  function closeColorPicker(returnFocus = false) {
+    if (!activeColor) return;
+    const previous = activeColor;
+    $("color-picker").hidden = true;
+    $(`${previous}-button`).setAttribute("aria-expanded", "false");
+    activeColor = null;
+    if (returnFocus) $(`${previous}-button`).focus();
+  }
+
+  function openColorPicker(target) {
+    if (activeColor === target) { closeColorPicker(true); return; }
+    closeColorPicker();
+    activeColor = target;
+    pickerHSV = hexToHSV($(target).value);
+    $("picker-title").textContent = target === "foreground" ? "Цвет кода" : "Цвет фона";
+    $("color-picker").hidden = false;
+    $(`${target}-button`).setAttribute("aria-expanded", "true");
+    updatePickerUI();
+    $("picker-plane").focus();
+  }
+
+  function applyQRPreviewSize(canvas) {
+    if (!canvas) return;
+    const stage = document.querySelector(".preview-stage");
+    const outer = getComputedStyle(stage), inner = getComputedStyle($("preview"));
+    const available = stage.clientWidth - parseFloat(outer.paddingLeft) - parseFloat(outer.paddingRight) - parseFloat(inner.paddingLeft) - parseFloat(inner.paddingRight) - 2;
+    const maximum = Math.min(360, Math.max(120, available));
+    const progress = Math.max(0, Math.min(1, (canvas.width - 160) / 1040));
+    canvas.style.width = `${Math.round(maximum * (0.4 + 0.6 * Math.sqrt(progress)))}px`;
+    canvas.style.height = "auto";
+  }
+
   function barcodeOptions() {
     const { dark, light, transparent } = colors();
     return {
@@ -162,6 +232,8 @@
     const seq = ++renderSequence;
     $("preview").classList.toggle("transparent-preview", $("transparent").checked);
     $("background").disabled = $("transparent").checked;
+    $("background-button").disabled = $("transparent").checked;
+    if ($("transparent").checked && activeColor === "background") closeColorPicker();
     $("transparent-hint").hidden = !$("transparent").checked;
     $("qr-size-note").textContent = `${$("qr-size").value || "—"} × ${$("qr-size").value || "—"} px`;
     syncColorControls();
@@ -180,9 +252,8 @@
         const canvas = document.createElement("canvas");
         await QRCode.toCanvas(canvas, payload, qrOptions());
         if (seq !== renderSequence) return;
-        // The QR library fixes both CSS dimensions inline; let the preview scale as a square.
-        canvas.style.removeProperty("width");
-        canvas.style.removeProperty("height");
+        // The library sets both dimensions inline. Keep a square preview that reflects the selected size.
+        applyQRPreviewSize(canvas);
         canvas.setAttribute("aria-hidden", "true");
         $("preview").replaceChildren(canvas);
       }
@@ -280,8 +351,52 @@
       scheduleRender();
     });
   }
-  $("foreground").addEventListener("input", syncColorControls);
-  $("background").addEventListener("input", syncColorControls);
+  for (const target of ["foreground", "background"]) {
+    $(`${target}-button`).addEventListener("click", () => openColorPicker(target));
+  }
+  $("picker-close").addEventListener("click", () => closeColorPicker(true));
+  $("picker-plane").addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    $("picker-plane").setPointerCapture(event.pointerId);
+    $("picker-plane").focus();
+    const rect = $("picker-plane").getBoundingClientRect();
+    pickerHSV.s = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    pickerHSV.v = 1 - Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    setPickerColor();
+  });
+  $("picker-plane").addEventListener("pointermove", (event) => {
+    if (!$("picker-plane").hasPointerCapture(event.pointerId)) return;
+    const rect = $("picker-plane").getBoundingClientRect();
+    pickerHSV.s = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    pickerHSV.v = 1 - Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    setPickerColor();
+  });
+  $("picker-plane").addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    const step = event.shiftKey ? 0.1 : 0.01;
+    if (event.key === "ArrowLeft") pickerHSV.s = Math.max(0, pickerHSV.s - step);
+    if (event.key === "ArrowRight") pickerHSV.s = Math.min(1, pickerHSV.s + step);
+    if (event.key === "ArrowUp") pickerHSV.v = Math.min(1, pickerHSV.v + step);
+    if (event.key === "ArrowDown") pickerHSV.v = Math.max(0, pickerHSV.v - step);
+    setPickerColor();
+  });
+  $("picker-hue").addEventListener("input", () => { pickerHSV.h = Number($("picker-hue").value); setPickerColor(); });
+  $("picker-hex").addEventListener("input", () => {
+    const hex = $("picker-hex").value.trim();
+    if (!/^#?[0-9a-f]{6}$/i.test(hex)) return;
+    $(activeColor).value = `#${hex.replace(/^#/, "").toUpperCase()}`;
+    pickerHSV = hexToHSV($(activeColor).value);
+    updatePickerUI();
+    syncColorControls();
+    scheduleRender();
+  });
+  $("picker-hex").addEventListener("blur", () => { if (activeColor) updatePickerUI(); });
+  document.addEventListener("pointerdown", (event) => {
+    if (activeColor && !$("color-picker").contains(event.target) && !event.target.closest(".color-control")) closeColorPicker();
+  });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && activeColor) closeColorPicker(true); });
+  window.addEventListener("resize", () => applyQRPreviewSize($("preview").querySelector("canvas")));
   $("qr-kind").addEventListener("change", setQRKind);
   $("barcode-format").addEventListener("change", () => {
     const [example, hint] = formatExamples[$("barcode-format").value];
@@ -291,8 +406,10 @@
   });
   $("wifi-show-password").addEventListener("change", () => { $("wifi-password").type = $("wifi-show-password").checked ? "text" : "password"; });
   $("wifi-security").addEventListener("change", () => { $("wifi-password").disabled = $("wifi-security").value === "nopass"; });
-  $("generator-form").addEventListener("input", scheduleRender);
-  $("generator-form").addEventListener("change", scheduleRender);
+  $("generator-form").addEventListener("input", (event) => { if (!event.target.closest("#color-picker")) scheduleRender(); });
+  $("generator-form").addEventListener("change", (event) => {
+    if (event.target.matches("select,input[type=checkbox]")) scheduleRender();
+  });
   $("generator-form").addEventListener("submit", (event) => event.preventDefault());
   $("download-png").addEventListener("click", () => download("png"));
   $("download-svg").addEventListener("click", () => download("svg"));

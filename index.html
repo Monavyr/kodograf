@@ -103,8 +103,15 @@
             </div>
           </fieldset>
           <div class="color-row">
-            <label class="field color-field" for="foreground"><span>Цвет кода</span><span class="color-control"><input id="foreground" type="color" value="#101827"><span class="color-swatch" id="foreground-swatch" aria-hidden="true"></span><span id="foreground-hex">#101827</span><span class="color-control-arrow" aria-hidden="true">↗</span></span></label>
-            <label class="field color-field" for="background"><span>Фон</span><span class="color-control"><input id="background" type="color" value="#ffffff"><span class="color-swatch" id="background-swatch" aria-hidden="true"></span><span id="background-hex">#FFFFFF</span><span class="color-control-arrow" aria-hidden="true">↗</span></span></label>
+            <div class="field color-field"><span>Цвет кода</span><input id="foreground" type="hidden" value="#101827"><button type="button" class="color-control" id="foreground-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="color-picker"><span class="color-swatch" id="foreground-swatch" aria-hidden="true"></span><span id="foreground-hex">#101827</span><span class="color-control-arrow" aria-hidden="true">⌄</span></button></div>
+            <div class="field color-field"><span>Фон</span><input id="background" type="hidden" value="#ffffff"><button type="button" class="color-control" id="background-button" aria-haspopup="dialog" aria-expanded="false" aria-controls="color-picker"><span class="color-swatch" id="background-swatch" aria-hidden="true"></span><span id="background-hex">#FFFFFF</span><span class="color-control-arrow" aria-hidden="true">⌄</span></button></div>
+          </div>
+          <div class="color-picker" id="color-picker" role="dialog" aria-label="Выбор цвета" hidden>
+            <div class="picker-header"><strong id="picker-title">Цвет кода</strong><button type="button" id="picker-close" class="picker-close" aria-label="Закрыть выбор цвета">×</button></div>
+            <div class="picker-plane" id="picker-plane" role="slider" tabindex="0" aria-label="Насыщенность и яркость" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext=""><span class="picker-cursor" id="picker-cursor"></span></div>
+            <label class="picker-hue-label" for="picker-hue">Оттенок</label>
+            <input id="picker-hue" class="picker-hue" type="range" min="0" max="359" value="0" aria-label="Оттенок">
+            <label class="picker-hex-label" for="picker-hex">HEX <input id="picker-hex" type="text" inputmode="text" maxlength="7" spellcheck="false" autocomplete="off" value="#101827"></label>
           </div>
           <label class="checkline"><input id="transparent" type="checkbox"> Прозрачный фон</label>
           <p id="transparent-hint" class="hint" hidden>Для надёжного сканирования размещайте код на светлой однотонной поверхности.</p>
