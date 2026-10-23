@@ -1,4 +1,6 @@
 /* Кодограф: клиентский генератор, без сетевых запросов и серверной обработки. */
+import { wifiEscape, normalizePhone, vcardEscape, isValidEmail, hexToHSV, hsvToHex } from "./core.js";
+
 (() => {
   "use strict";
 
@@ -16,6 +18,10 @@
   let valid = false;
   let renderSequence = 0;
   let timer;
+  // Set once localStorage has been restored (or found empty) for this page
+  // load. Saves are blocked before that moment so the debounced initial render
+  // can never overwrite stored settings with form defaults.
+  let settingsLoaded = false;
   let activeColor = null;
   let pickerHSV = { h: 0, s: 0, v: 0 };
 
@@ -33,9 +39,14 @@
 
   function setQRKind() {
     const kind = $("qr-kind").value;
+    // Toggle field visibility directly here (instead of relying on the form's
+    // change listener) so updates also apply while restoring saved settings.
     $("qr-text-fields").hidden = kind !== "text";
     $("qr-wifi-fields").hidden = kind !== "wifi";
     $("qr-contact-fields").hidden = kind !== "email" && kind !== "phone";
+    $("qr-sms-fields").hidden = kind !== "sms";
+    $("qr-geo-fields").hidden = kind !== "geo";
+    $("qr-vcard-fields").hidden = kind !== "vcard";
     if (kind === "email") {
       $("qr-contact-label").textContent = "Адрес электронной почты";
       $("qr-contact").placeholder = "name@example.com";
@@ -54,9 +65,8 @@
     return value;
   }
 
-  function wifiEscape(value) {
-    return value.replace(/[\\;,:"\n\r]/g, (char) => `\\${char}`);
-  }
+
+
 
   function qrPayload() {
     const kind = $("qr-kind").value;
@@ -73,14 +83,54 @@
       if (security !== "nopass" && !password) throw new Error("Введите пароль сети Wi-Fi.");
       return `WIFI:T:${security};S:${wifiEscape(ssid)};P:${security === "nopass" ? "" : wifiEscape(password)};;`;
     }
+    if (kind === "sms") {
+      const smsPhone = normalizePhone($("sms-phone").value);
+      if (!smsPhone) throw new Error("Введите корректный номер телефона для SMS: цифры и при необходимости +.");
+      const body = $("sms-body").value.trim();
+      return body ? `SMSTO:${smsPhone}:${encodeURIComponent(body)}` : `SMSTO:${smsPhone}:`;
+    }
+    if (kind === "geo") {
+      const lat = Number($("geo-lat").value.replace(",", "."));
+      const lon = Number($("geo-lon").value.replace(",", "."));
+      if (!Number.isFinite(lat) || lat < -90 || lat > 90) throw new Error("Широта должна быть числом от -90 до 90.");
+      if (!Number.isFinite(lon) || lon < -180 || lon > 180) throw new Error("Долгота должна быть числом от -180 до 180.");
+      return `geo:${lat.toFixed(6)},${lon.toFixed(6)}`;
+    }
+    if (kind === "vcard") {
+      const fullName = $("vcard-name").value.trim();
+      const phone = $("vcard-phone").value.trim();
+      const email = $("vcard-email").value.trim();
+      const org = $("vcard-org").value.trim();
+      const title = $("vcard-title").value.trim();
+      const url = $("vcard-url").value.trim();
+      if (!fullName && !phone && !email && !org) throw new Error("Заполните хотя бы имя, телефон, почту или организацию.");
+      if (email && !isValidEmail(email)) throw new Error("В контакте указан некорректный адрес электронной почты.");
+      const parts = fullName.split(/\s+/);
+      const last = parts.length > 1 ? parts.shift() : "";
+      const first = parts.join(" ");
+      const lines = ["BEGIN:VCARD", "VERSION:3.0"];
+      lines.push(`N:${vcardEscape(last)};${vcardEscape(first)};;;`);
+      lines.push(`FN:${vcardEscape(fullName || first || last)}`);
+      if (org) lines.push(`ORG:${vcardEscape(org)}`);
+      if (title) lines.push(`TITLE:${vcardEscape(title)}`);
+      if (phone) {
+        const vcardTel = normalizePhone(phone);
+        if (!vcardTel) throw new Error("В контакте указан некорректный номер телефона.");
+        lines.push(`TEL;TYPE=CELL:${vcardTel}`);
+      }
+      if (email) lines.push(`EMAIL:${email}`);
+      if (url) lines.push(`URL:${url}`);
+      lines.push("END:VCARD");
+      return lines.join("\n");
+    }
     const contact = $("qr-contact").value.trim();
     if (kind === "email") {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) throw new Error("Введите корректный адрес электронной почты.");
+      if (!isValidEmail(contact)) throw new Error("Введите корректный адрес электронной почты.");
       return `mailto:${contact}`;
     }
-    const phone = contact.replace(/[\s()\-]/g, "");
-    if (!/^\+?[0-9]{5,20}$/.test(phone)) throw new Error("Введите номер телефона цифрами, при необходимости с +.");
-    return `tel:${phone}`;
+    const telPhone = normalizePhone(contact);
+    if (!telPhone) throw new Error("Введите номер телефона цифрами, при необходимости с +.");
+    return `tel:${telPhone}`;
   }
 
   function colors() {
@@ -108,24 +158,7 @@
     }
   }
 
-  function hexToHSV(hex) {
-    const [r, g, b] = [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16) / 255);
-    const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
-    let h = 0;
-    if (delta) {
-      if (max === r) h = ((g - b) / delta) % 6;
-      else if (max === g) h = (b - r) / delta + 2;
-      else h = (r - g) / delta + 4;
-      h = (h * 60 + 360) % 360;
-    }
-    return { h, s: max ? delta / max : 0, v: max };
-  }
 
-  function hsvToHex({ h, s, v }) {
-    const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
-    const parts = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
-    return `#${parts.map((part) => Math.round((part + m) * 255).toString(16).padStart(2, "0")).join("").toUpperCase()}`;
-  }
 
   function updatePickerUI() {
     $("picker-plane").style.setProperty("--picker-hue", `${pickerHSV.h}`);
@@ -209,6 +242,8 @@
     $("status").textContent = "Исправьте данные для генерации";
     $("download-png").disabled = true;
     $("download-svg").disabled = true;
+    $("copy-image").disabled = true;
+    $("copy-payload").disabled = true;
   }
 
   function showSuccess() {
@@ -218,6 +253,8 @@
     $("status").textContent = "Код готов к скачиванию";
     $("download-png").disabled = false;
     $("download-svg").disabled = false;
+    $("copy-image").disabled = false;
+    $("copy-payload").disabled = false;
   }
 
   function errorMessage(error) {
@@ -268,7 +305,119 @@
     valid = false;
     $("download-png").disabled = true;
     $("download-svg").disabled = true;
-    timer = setTimeout(render, 160);
+    timer = setTimeout(() => {
+      // Save synchronously *before* the async render starts: if a reload
+      // interrupts rendering, storage already holds the current form state.
+      saveSettings();
+      render();
+    }, 160);
+  }
+
+  // --- Settings persistence (localStorage, best-effort) ---
+  const SETTINGS_KEY = "kodograf-settings-v1";
+  // Read synchronously in <head>, before any save can happen: this is the
+  // snapshot we are allowed to restore. Captured early on purpose — later
+  // reads could observe values already overwritten by a pagehide flush of
+  // the *previous* page instance racing with this load.
+  let storedSettingsRaw = null;
+  try {
+    storedSettingsRaw = localStorage.getItem(SETTINGS_KEY);
+  } catch {
+    /* storage unavailable in private mode; persistence is optional */
+  }
+  const SETTING_IDS = [
+    "qr-kind", "qr-text", "wifi-ssid", "wifi-security", "qr-size", "qr-error",
+    "sms-phone", "sms-body", "geo-lat", "geo-lon", "vcard-name", "vcard-phone",
+    "vcard-email", "vcard-org", "vcard-title", "vcard-url", "barcode-format",
+    "barcode-value", "bar-width", "bar-height", "foreground", "background",
+  ];
+
+  function saveSettings() {
+    if (!settingsLoaded) return;
+    try {
+      const data = { mode };
+      for (const id of SETTING_IDS) {
+        const el = $(id);
+        if (el) data[id] = el.value;
+      }
+      data.transparent = $("transparent").checked;
+      data.showLabel = $("show-label").checked;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+    } catch {
+      // Storage can be unavailable in private mode; settings persistence is optional.
+    }
+  }
+
+  function restoreSettings() {
+    let data = null;
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") data = parsed;
+      }
+    } catch {
+      // Corrupt or unavailable storage: start from defaults.
+    }
+    if (data) {
+      for (const id of SETTING_IDS) {
+        const el = $(id);
+        if (el && typeof data[id] === "string") el.value = data[id];
+      }
+      if (typeof data.transparent === "boolean") $("transparent").checked = data.transparent;
+      if (typeof data.showLabel === "boolean") $("show-label").checked = data.showLabel;
+    }
+    setQRKind();
+    const formatHint = formatExamples[$("barcode-format").value];
+    if (formatHint) $("barcode-hint").textContent = formatHint[1];
+    // setMode() updates the UI and schedules a render; it also sets `mode`.
+    if (data && (data.mode === "barcode" || data.mode === "qr")) setMode(data.mode);
+    settingsLoaded = true;
+  }
+
+  // --- Clipboard helpers ---
+  let statusTimer;
+  function flashStatus(message) {
+    $("status").textContent = message;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => {
+      if (valid) $("status").textContent = "Код готов к скачиванию";
+    }, 2200);
+  }
+
+  async function copyPayload() {
+    if (!valid) return;
+    try {
+      const text = mode === "barcode" ? $("barcode-value").value : qrPayload();
+      await navigator.clipboard.writeText(text);
+      flashStatus("Данные скопированы в буфер обмена");
+    } catch {
+      flashStatus("Не удалось скопировать данные");
+    }
+  }
+
+  async function copyImage() {
+    if (!valid) return;
+    try {
+      let blob;
+      if (mode === "qr") {
+        const canvas = document.createElement("canvas");
+        await QRCode.toCanvas(canvas, qrPayload(), qrOptions());
+        blob = await canvasBlob(canvas);
+      } else {
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        JsBarcode(svg, $("barcode-value").value, barcodeOptions());
+        blob = await barcodePNG(svg);
+      }
+      if (typeof ClipboardItem === "undefined" || !navigator.clipboard || !navigator.clipboard.write) {
+        throw new Error("Clipboard image API unavailable");
+      }
+      const pngBlob = blob.type === "image/png" ? blob : new Blob([blob], { type: "image/png" });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob })]);
+      flashStatus("Изображение скопировано в буфер обмена");
+    } catch {
+      flashStatus("Не удалось скопировать изображение");
+    }
   }
 
   function saveBlob(blob, filename) {
@@ -406,12 +555,37 @@
   });
   $("wifi-show-password").addEventListener("change", () => { $("wifi-password").type = $("wifi-show-password").checked ? "text" : "password"; });
   $("wifi-security").addEventListener("change", () => { $("wifi-password").disabled = $("wifi-security").value === "nopass"; });
-  $("generator-form").addEventListener("input", (event) => { if (!event.target.closest("#color-picker")) scheduleRender(); });
+  $("generator-form").addEventListener("input", (event) => {
+    if (event.target.closest("#color-picker")) return;
+    scheduleRender();
+  });
   $("generator-form").addEventListener("change", (event) => {
     if (event.target.matches("select,input[type=checkbox]")) scheduleRender();
   });
   $("generator-form").addEventListener("submit", (event) => event.preventDefault());
   $("download-png").addEventListener("click", () => download("png"));
   $("download-svg").addEventListener("click", () => download("svg"));
-  render();
+  $("copy-image").addEventListener("click", copyImage);
+  $("copy-payload").addEventListener("click", copyPayload);
+  restoreSettings();
+  scheduleRender();
+
+  // A reload can cut the page off mid-debounce: flush pending changes
+  // synchronously while the page is still going away (bfcache-safe).
+  window.addEventListener("pagehide", () => {
+    if (timer && settingsLoaded) {
+      clearTimeout(timer);
+      timer = null;
+      saveSettings();
+    }
+  });
+
+  // PWA: register the service worker for offline use (only on https/localhost).
+  if ("serviceWorker" in navigator && (window.isSecureContext || location.hostname === "localhost")) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {
+        // Offline support is optional; ignore registration failures.
+      });
+    });
+  }
 })();
