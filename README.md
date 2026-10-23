@@ -2,6 +2,8 @@
 
 **QR and barcode generator in your browser · Генератор QR-кодов и штрихкодов в браузере**
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE) [![Pages](https://img.shields.io/badge/deployed-GitHub%20Pages-blue)](https://monavyr.github.io/kodograf/) [![No tracking](https://img.shields.io/badge/data-stays%20in%20browser-brightgreen)](#ru)
+
 [Русский](#ru) · [English](#en)
 
 ![Скриншот интерфейса Кодограф / Screenshot of the Kodograf interface](assets/preview.png)
@@ -42,7 +44,7 @@ python -m http.server 8000
 
 HTML, CSS и JavaScript без серверной части. Генерация штрихкодов: [JsBarcode 3.12.3](https://github.com/lindell/JsBarcode). Генерация QR: [node-qrcode 1.5.4](https://github.com/soldair/node-qrcode), собранный для браузера; зависимость [dijkstrajs](https://github.com/andrewhayward/dijkstra). Тексты лицензий сторонних библиотек находятся в `vendor/licenses/`.
 
-Для исходного кода этого проекта отдельная лицензия пока не указана.
+Исходный код проекта распространяется под лицензией [MIT](LICENSE).
 
 ---
 
@@ -82,4 +84,4 @@ Then open `http://localhost:8000/`.
 
 HTML, CSS, and JavaScript without a server-side component. Barcode generation: [JsBarcode 3.12.3](https://github.com/lindell/JsBarcode). QR generation: [node-qrcode 1.5.4](https://github.com/soldair/node-qrcode), bundled for the browser; dependency: [dijkstrajs](https://github.com/andrewhayward/dijkstra). Third-party library license texts are in `vendor/licenses/`.
 
-No separate license has yet been specified for this project's source code.
+The source code of this project is distributed under the [MIT](LICENSE) license.

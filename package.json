@@ -1,0 +1,23 @@
+{
+  "name": "kodograf",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Кодограф — генератор QR-кодов и штрихкодов в браузере (портфолио-проект, без серверной части).",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "eslint app.js sw.js core.js tests/",
+    "format": "prettier --write .",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.64.1",
+    "eslint": "^9.0.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.3.0",
+    "vitest": "^2.1.0"
+  }
+}

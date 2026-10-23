@@ -5,12 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101827">
   <meta name="description" content="Бесплатный генератор QR-кодов и штрихкодов Code 128, EAN, UPC, Code 39 и ITF-14. Экспорт PNG и SVG прямо в браузере.">
+  <!-- Open Graph / social preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Кодограф">
+  <meta property="og:title" content="Кодограф — генератор QR и штрихкодов">
+  <meta property="og:description" content="QR-коды и штрихкоды прямо в браузере: настройка цвета, экспорт PNG и SVG, без регистрации и серверной обработки.">
+  <meta property="og:url" content="https://monavyr.github.io/kodograf/">
+  <meta property="og:image" content="https://monavyr.github.io/kodograf/assets/preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="ru_RU">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Кодограф — генератор QR и штрихкодов">
+  <meta name="twitter:description" content="QR-коды и штрихкоды прямо в браузере: настройка цвета, экспорт PNG и SVG, без регистрации.">
+  <meta name="twitter:image" content="https://monavyr.github.io/kodograf/assets/preview.png">
+  <link rel="canonical" href="https://monavyr.github.io/kodograf/">
   <title>Кодограф — генератор QR и штрихкодов</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <script defer src="vendor/JsBarcode.all.min.js"></script>
   <script defer src="vendor/qrcode.bundle.js"></script>
-  <script defer src="app.js"></script>
+  <!-- Restore saved form values before the browser re-applies its own form
+       state on reload; this must run synchronously in <head>, not from the
+       deferred module. -->
+  <script>
+    (() => {
+      try {
+        const data = JSON.parse(localStorage.getItem("kodograf-settings-v1"));
+        if (!data || typeof data !== "object") return;
+        // Wait until the form exists: this script runs in <head>, before the
+        // body is parsed, so getElementById would otherwise find nothing.
+        document.addEventListener("DOMContentLoaded", () => {
+          for (const [id, value] of Object.entries(data)) {
+            if (typeof value !== "string") continue;
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+          }
+        });
+      } catch {
+        /* storage unavailable; restoration is optional */
+      }
+    })();
+  </script>
+  <script type="module" src="app.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -49,6 +88,9 @@
                 <option value="wifi">Доступ к Wi-Fi</option>
                 <option value="email">Адрес электронной почты</option>
                 <option value="phone">Телефонный номер</option>
+                <option value="sms">SMS-сообщение</option>
+                <option value="geo">Геолокация</option>
+                <option value="vcard">Контакт (vCard)</option>
               </select>
             </label>
             <div id="qr-text-fields">
@@ -64,6 +106,22 @@
             </div>
             <div id="qr-contact-fields" hidden>
               <label class="field" for="qr-contact"><span id="qr-contact-label">Адрес</span><input id="qr-contact" maxlength="320" autocomplete="off" placeholder="name@example.com"></label>
+            </div>
+            <div id="qr-sms-fields" hidden>
+              <label class="field" for="sms-phone"><span>Номер телефона</span><input id="sms-phone" maxlength="32" autocomplete="off" placeholder="+7 900 000-00-00"></label>
+              <label class="field" for="sms-body"><span>Текст сообщения</span><textarea id="sms-body" rows="2" maxlength="600" placeholder="Здравствуйте!"></textarea></label>
+            </div>
+            <div id="qr-geo-fields" hidden>
+              <label class="field" for="geo-lat"><span>Широта</span><input id="geo-lat" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="55.7558"></label>
+              <label class="field" for="geo-lon"><span>Долгота</span><input id="geo-lon" inputmode="decimal" maxlength="12" autocomplete="off" placeholder="37.6173"></label>
+            </div>
+            <div id="qr-vcard-fields" hidden>
+              <label class="field" for="vcard-name"><span>Имя и фамилия</span><input id="vcard-name" maxlength="120" autocomplete="off" placeholder="Иван Петров"></label>
+              <label class="field" for="vcard-phone"><span>Телефон</span><input id="vcard-phone" maxlength="32" autocomplete="off" placeholder="+7 900 000-00-00"></label>
+              <label class="field" for="vcard-email"><span>Электронная почта</span><input id="vcard-email" type="email" maxlength="320" autocomplete="off" placeholder="name@example.com"></label>
+              <label class="field" for="vcard-org"><span>Организация</span><input id="vcard-org" maxlength="120" autocomplete="off" placeholder="Компания"></label>
+              <label class="field" for="vcard-title"><span>Должность</span><input id="vcard-title" maxlength="120" autocomplete="off" placeholder="Менеджер"></label>
+              <label class="field" for="vcard-url"><span>Сайт</span><input id="vcard-url" maxlength="320" autocomplete="off" placeholder="https://example.com"></label>
             </div>
             <div class="field-row">
               <label class="field" for="qr-size"><span>Размер QR, px</span><input id="qr-size" type="number" min="160" max="1200" step="10" value="360"></label>
@@ -126,6 +184,10 @@
         <div class="download-actions">
           <button type="button" id="download-png" class="button primary">↓ Скачать PNG</button>
           <button type="button" id="download-svg" class="button secondary">↓ Скачать SVG</button>
+        </div>
+        <div class="secondary-actions">
+          <button type="button" id="copy-image" class="chip-button" disabled>⧉ Копировать изображение</button>
+          <button type="button" id="copy-payload" class="chip-button" disabled>⎘ Копировать данные</button>
         </div>
         <p class="privacy"><span aria-hidden="true">◈</span> Данные остаются в вашем браузере. Сайт не отправляет введённый текст на сервер.</p>
       </div>
